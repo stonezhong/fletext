@@ -1,2 +1,1 @@
-# fletext
-Utility to build python flet UI Applications
+Wraps flet UI component and make it easier to build flext based UI app.
