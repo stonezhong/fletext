@@ -4,8 +4,9 @@ import flet as ft
 import sys
 from copy import copy
 from typing import Any, List, Optional, get_type_hints, Callable
-from enum import Enum
+from enum import Enum, auto
 from uuid import uuid4
+from abc import ABC, abstractmethod
 
 #########################################################################################
 # 概念
@@ -35,6 +36,9 @@ from uuid import uuid4
 
 TYPE_FIELD  = "$type"
 REFID_FIELD = "$refid"
+
+class HANDLER_TYPE(Enum):
+    ON_CLICK = auto()
 
 @dataclass
 class ValueRef:
@@ -104,6 +108,13 @@ class Component:
         if self._refs is None:
             return None
         return self._refs.get(refid)
+
+    def set_child_handler(self, refid:str, handler_type:HANDLER_TYPE, handler):
+        child_component = self.get_child(refid)
+        match handler_type:
+            case HANDLER_TYPE.ON_CLICK:
+                child_component.ui.on_click = handler
+    
 
     @property
     def ui(self):
@@ -196,6 +207,10 @@ class Button(Component):
     content:                Optional[ValueRef] = None
 
 @dataclass
+class TextButton(Component):
+    content:                Optional[ValueRef] = None
+
+@dataclass
 class IconButton(Component):
     disabled:               Optional[ValueRef] = None
     icon:                   Optional[ValueRef] = None
@@ -209,8 +224,8 @@ class ExpansionTile(Component):
 @dataclass
 class MenuBar(Component):
     controls:               List[Component] = field(default_factory=list)
-    style:                  Optional[ft.MenuStyle] = None
-    expand:                 Optional[bool] = None
+    style:                  Optional[ValueRef] = None
+    expand:                 Optional[ValueRef] = None
 
 @dataclass
 class SubmenuButton(Component):
@@ -221,6 +236,13 @@ class SubmenuButton(Component):
 class MenuItemButton(Component):
     content:                Optional[Component] = None
 
+@dataclass
+class AlertDialog(Component):
+    model:                  Optional[ValueRef] = None
+    title:                  Optional[Component] = None
+    content:                Optional[Component] = None
+    actions:                Optional[List[Component]] = None
+
 COMPONENT_MAP = {
     "Text":             Text,
     "Column":           Column,
@@ -228,11 +250,13 @@ COMPONENT_MAP = {
     "Container":        Container,
     "TextField":        TextField,
     "Button":           Button,
+    "TextButton":       TextButton,
     "IconButton":       IconButton,
     "ExpansionTile":    ExpansionTile,
     "MenuBar":          MenuBar,
     "SubmenuButton":    SubmenuButton,
-    "MenuItemButton":   MenuItemButton
+    "MenuItemButton":   MenuItemButton,
+    "AlertDialog":      AlertDialog,
 }
 
 #################################################################
@@ -240,7 +264,7 @@ COMPONENT_MAP = {
 # - 你可以覆盖方法`on_variable_updated`。这样，每当一个变量被修改，你可以重新
 #   计算其他需要变更的变量
 #################################################################
-class Controller:
+class Controller(ABC):
     _page: ft.Page
     _component: Component
     _variable_map:     Dict[str, Any]   # variable's value come from component's value
@@ -251,10 +275,14 @@ class Controller:
         self._page = page
         self._component = component
         self._variable_map = {}
+    
+    def get_variable(self, variable_name:str) -> Any:
+        return self._variable_map.get(variable_name)
 
     # When a component's value changed, it gets saved to _variable_map and publish message
     # about the change
-    def register_input_bind(self, variable_name:str, refid:str):
+    def register_input_bind(self, variable_name:str):
+        refid = variable_name
         topic = f"{self._id}-{variable_name}"
 
         self._variable_map[variable_name] = ""
@@ -267,7 +295,8 @@ class Controller:
         self._component.get_child(refid).ui.on_change = on_change
 
     # When a variable is change, publish to subscribed component
-    def register_output_bind(self, variable_name:str, refid:str):
+    def register_output_bind(self, variable_name:str):
+        refid = variable_name
         topic = f"{self._id}-{variable_name}"
 
         def on_value_changed(topic:str, value:str):
@@ -283,7 +312,11 @@ class Controller:
         self._page.pubsub.send_all_on_topic(topic, value)
 
     # derived class to override it
+    @abstractmethod
     def on_variable_updated(self, variable_name:str):
         pass
-
+    
+    @property
+    def page(self) -> ft.Page:
+        return self._page
 

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fletext"
-version = "0.1.1"
+version = "0.1.2"
 authors = [
     {name="Stone Zhong", email="stone.zhong@gmail.com"}
 ]
@@ -19,7 +19,7 @@ license = "MIT"
 license-files = ["LICENCSE"]
 
 dependencies = [
-    "flet>=0.84"
+    "flet>=0.83"
 ]
 
 [project.urls]
