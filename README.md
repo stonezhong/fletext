@@ -83,6 +83,7 @@ my_controller.register_output_bind("sum")
 
 # 例子
 这个例子是一个加法起，你可以输入x和y的值，它们必须是整数。然后你会看到x+y被显示。
+
 文件名称: `add.py`
 ```python
 #!/usr/bin/env python
@@ -150,7 +151,6 @@ if __name__ == '__main__':
     ft.app(target=main)
 ```
 
-<br />
 文件名称: `page.yaml`
 
 ```yaml
