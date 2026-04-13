@@ -152,6 +152,7 @@ if __name__ == '__main__':
 
 <br />
 文件名称: `page.yaml`
+
 ```yaml
 $type: Row
 controls:
