@@ -296,12 +296,16 @@ class Controller(ABC):
         self._component.get_child(refid).ui.on_change = on_change
 
     # When a variable is change, publish to subscribed component
-    def register_output_bind(self, variable_name:str):
+    def register_output_bind(self, variable_name:str, property_name:str="value"):
         refid = variable_name
         topic = f"{self._id}-{variable_name}"
 
         def on_value_changed(topic:str, value:str):
-            self._component.get_child(refid).ui.value = self._variable_map[variable_name]
+            setattr(
+                self._component.get_child(refid).ui,
+                property_name,
+                variable_name
+            )
             self._component.get_child(refid).ui.update()
         
         self._page.pubsub.subscribe_topic(topic, on_value_changed)
