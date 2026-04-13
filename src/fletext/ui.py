@@ -109,11 +109,12 @@ class Component:
             return None
         return self._refs.get(refid)
 
-    def set_child_handler(self, refid:str, handler_type:HANDLER_TYPE, handler):
+    def set_child_handler(self, refid:str, handler_type:HANDLER_TYPE, handler) -> Component:
         child_component = self.get_child(refid)
         match handler_type:
             case HANDLER_TYPE.ON_CLICK:
                 child_component.ui.on_click = handler
+        return self
     
 
     @property
@@ -320,3 +321,7 @@ class Controller(ABC):
     def page(self) -> ft.Page:
         return self._page
 
+
+    @property
+    def component(self) -> Component:
+        return self._component
