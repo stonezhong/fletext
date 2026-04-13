@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 import flet as ft
 import sys
 from copy import copy
-from typing import Any, List, Optional, get_type_hints, Callable
+from typing import Any, List, Optional, get_type_hints, Callable, Tuple
 from enum import Enum, auto
 from uuid import uuid4
 from abc import ABC, abstractmethod
@@ -282,11 +282,11 @@ class Controller(ABC):
 
     # When a component's value changed, it gets saved to _variable_map and publish message
     # about the change
-    def register_input_bind(self, variable_name:str):
+    def register_input_bind(self, variable_name:str, init_value:str=""):
         refid = variable_name
         topic = f"{self._id}-{variable_name}"
 
-        self._variable_map[variable_name] = ""
+        self._variable_map[variable_name] = init_value
 
         def on_change(e: ft.ControlEvent):
             self._variable_map[variable_name] = e.control.value
@@ -295,24 +295,32 @@ class Controller(ABC):
 
         self._component.get_child(refid).ui.on_change = on_change
 
-    # When a variable is change, publish to subscribed component
-    def register_output_bind(self, variable_name:str, property_name:str="value"):
-        refid = variable_name
-        topic = f"{self._id}-{variable_name}"
+    def _get_refid_and_property_name(self, variable_name:str) -> Tuple[str, str, str]:
+        p_pos = variable_name.rfind("#")
+        if p_pos > 0:
+            refid = variable_name[:p_pos]
+            property_name = variable_name[p_pos+1:]
+        else:
+            refid = variable_name
+            property_name = "value"
+        topic = f"{self._id}#{refid}#{property_name}"
+        return (refid, property_name, topic)
 
+    # When a variable is change, publish to subscribed component
+    def register_output_bind(self, variable_name:str):
+        refid, property_name, topic = self._get_refid_and_property_name(variable_name)
         def on_value_changed(topic:str, value:str):
             setattr(
                 self._component.get_child(refid).ui,
                 property_name,
-                variable_name
+                value
             )
             self._component.get_child(refid).ui.update()
         
         self._page.pubsub.subscribe_topic(topic, on_value_changed)
     
     def set_variable(self, variable_name:str, value:Any):
-        topic = f"{self._id}-{variable_name}"
-
+        _, _, topic = self._get_refid_and_property_name(variable_name)
         self._variable_map[variable_name] = value
         self._page.pubsub.send_all_on_topic(topic, value)
 
